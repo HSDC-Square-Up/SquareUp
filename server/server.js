@@ -1,28 +1,21 @@
 const express = require('express');
 const path = require('path');
 const mongoose = require('mongoose');
-const Controller = require('./controllers');
+const Controller = require('./controllers/controllers');
+const cookieController = require('./controllers/cookieController');
+const cookieParser = require('cookie-parser');
 const cors = require('cors');
 const dotenv = require('dotenv');
-const multer = require('multer');
-
-// Profile picture storage configuration
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, './public');
-  },
-  filename: (req, file, cb) => {
-    // console.log(file);
-    cb(null, Date.now() + path.extname(file.originalname));
-  },
-});
-const upload = multer({ storage: storage });
 
 //checking
 const PORT = 8000;
 
 const app = express();
-app.use(cors());
+
+app.use(cors({
+  origin: 'http://localhost:3000',
+   credentials: true,
+}));
 // this is temporary, insert real url later
 // created in models.js so not needed here
 // const mongoURI = process.env.NODE_ENV === 'test' ? 'mongodb://localhost/SquareUp' : 'mongodb://localhost/SquareUp';
@@ -31,73 +24,71 @@ app.use(cors());
 // automatically parse url encoded body content and form data rom incoming requrests and place it in req.body
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
+app.use(cookieParser());
 app.use('/client', express.static(path.resolve(__dirname, '../client')));
 
-/** Profile picture upload endpoints */
-// app.post(
-//   '/profile_picture',
-//   upload.single('profilePicture'),
-//   Controller.addProfilePicture,
-//   (req, res) => {
-//     console.log(req.file, req.body);
-//     res.status(200).json(req.file);
-//   }
-// );
-// app.get('/profile_picture', (req, res) => {
-//   res.status(200).sendFile(path.join(__dirname, '../public/1699313229211.png'));
-// });
+      // this is for after you enter your information
+      // creates user and then redirects them to the homepage
+      app.post('/signup', 
+      Controller.createUser, 
+      Controller.verifyUser, 
+      cookieController.produceJWT, 
+      cookieController.setSSIDCookie, (req, res) => {
+        // console.log('res.cookies from signup', res.locals.cookies);
+        res.status(200).json({userInfo: res.locals.user, token: res.locals.token });
+      });
+      // login
+      app.post('/login', 
+        Controller.verifyUser, 
+        cookieController.produceJWT, 
+        (req, res) => {
+        
+        res.status(200).json({userInfo: res.locals.userInfo, token: res.locals.token});
+      });
 
-//on render for the root get all profiles, right now set to 30 random profiles
-//Test is the homepage
-app.get('/HomePage', Controller.getProfile, (req, res) => {
-  console.log('testing get route');
-  res.status(200).json(res.locals.profiles);
-});
+      app.get('/verifyCookie', Controller.verifyCookie, (req, res) => {
+        res.status(200).json(res.locals.response);
+      });
 
-app.post('/', Controller.createUser, (req, res) => {
-  res.status(200).json();
-});
-// express routes
-//WHERE ARE WE ROUTING TO FOR APP.GET !!!!!!!!!!!!!
-// root
-app.get('/', (req, res) => {
-  res.sendFile(path.resolve(__dirname, '../client/index.jsx'));
-});
+      app.get('/Leaderboard', Controller.getProfile, (req, res) => {
+        // console.log('testing get route');
+        res.status(200).json(res.locals.profiles);
+      });
 
-// signup
-// redirect to the sign up page when a sign up button gets pushed
-app.get('/signup', (req, res) => {
-  res.sendFile(path.resolve(__dirname, '../client/signup.jsx'));
-});
+      app.get('/logout', (req, res) => {
+        console.log('clearing cookies...')
+        res.status(200).clearCookie('ssid');
+      })
 
-// this is for after you enter your information
-// creates user and then redirects them to the homepage
-app.post('/signup', Controller.createUser, (req, res) => {
+      app.patch('/editProfile', Controller.updateUser, (req, res) => {
+        console.log('update request completed');
+        res.status(200).json();
+      })
 
-  res.status(200);
+      //for tests only
+      app.post('/delete', Controller.deleteUser, (req, res) => {
+        res.status(200).json({ message: 'User deleted successfully' });
+      });
+      app.post('/getUser', Controller.getUser, (req,res) =>{
+        res.status(200).json(res.locals.userInfo);
+      })
+      app.get('/secret', (req, res) => {
+        res.redirect('https://www.youtube.com/watch?v=dQw4w9WgXcQ');
+      })
 
-  res.status(200).json(res.locals.user);
-
-});
-
-// login
-app.post('/login', Controller.verifyUser, (req, res) => {
-  res.status(200).json(res.locals.userInfo);
-});
-
-// error handling
-app.use((req, res) => {
-  res.status(404).send('Not Found');
-});
-
-app.use((err, req, res, next) => {
-  console.log(err);
-  res.status(500).send({ error: err });
-});
-
-app.listen(PORT, () => {
-  console.log(`Listening on port ${PORT}...`);
-});
-
-module.exports = app;
+      // error handling
+      app.use((req, res) => {
+        res.status(404).send('Not Found');
+      });
+      
+      app.use((err, req, res, next) => {
+        console.log('global error', err); 
+        res.status(500).send(JSON.stringify(err.error));
+      });
+        
+        const server = app.listen(PORT, () => {
+          console.log(`Listening on port ${PORT}...`);
+        });
+        
+        module.exports = app;
+        module.exports = server;

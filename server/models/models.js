@@ -1,8 +1,9 @@
-const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs');
+const mongoose = require("mongoose");
+const bcrypt = require("bcryptjs");
+require("dotenv").config();
+const SALT_WORK_FACTOR = 10;
 
-const MONGO_URI =
-  'mongodb+srv://bnlee419:brian0419@cluster0.tqcvw05.mongodb.net/?retryWrites=true&w=majority';
+const MONGO_URI = process.env.DB_URI;
 
 mongoose
   .connect(MONGO_URI, {
@@ -10,9 +11,9 @@ mongoose
     useNewUrlParser: true,
     useUnifiedTopology: true,
     // sets the name of the DB that our collections are part of
-    dbName: 'SquareUp',
+    dbName: "SquareUp",
   })
-  .then(() => console.log('Connected to Mongo DB.'))
+  .then(() => console.log("Connected to Mongo DB."))
   .catch((err) => console.log(err));
 
 const Schema = mongoose.Schema;
@@ -20,7 +21,7 @@ const Schema = mongoose.Schema;
 const profileSchema = new Schema({
   name: {
     type: String,
-    required: true,
+    required: false,
   },
   username: {
     type: String,
@@ -29,7 +30,7 @@ const profileSchema = new Schema({
   },
   age: {
     type: Number,
-    required: true,
+    required: false,
   },
   password: {
     type: String,
@@ -40,19 +41,19 @@ const profileSchema = new Schema({
   },
   sex: {
     type: String,
-    required: true,
+    required: false,
   },
   height: {
     type: Number,
-    required: true,
+    required: false,
   },
   weight: {
     type: Number,
-    required: true,
+    required: false,
   },
   fightingStyle: {
     type: String,
-    required: true,
+    required: false,
   },
   wins: [{ type: String }],
   loss: [{ type: String }],
@@ -64,26 +65,17 @@ const profileSchema = new Schema({
     type: Number,
     default: 0,
   },
+  location: String,
 });
 
-const SALT_WORK_FACTOR = 5;
-
-profileSchema.pre('save', async function (next) {
-  try {
-    if (this.isModified('password')) {
-      // Hash the password using bcrypt
-      const hashedPassword = await bcrypt.hash(this.password, SALT_WORK_FACTOR);
-
-      // Set the hashed password as the user's password
-      this.password = hashedPassword;
-      console.log('PASSWORD', this.password);
-    }
-    next();
-  } catch (error) {
-    next(error);
-  }
+profileSchema.pre("save", function (next) {
+  bcrypt.hash(this.password, SALT_WORK_FACTOR, (err, hash) => {
+    if (err) return next(err);
+    this.password = hash;
+    return next();
+  });
 });
 
-const Profiles = mongoose.model('profile', profileSchema);
+const Profiles = mongoose.model("profile", profileSchema);
 
 module.exports = Profiles;

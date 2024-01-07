@@ -1,12 +1,12 @@
 const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 
-module.exports = {
+const config = {
   mode: 'development',
   entry: { bundle: path.resolve(__dirname, 'client/index.js') },
   output: {
     path: path.resolve(__dirname, 'dist'),
-    filename: 'index.bundle.js',
+    // filename: 'index.bundle.js',
     clean: true,
     assetModuleFilename: '[name][ext]',
   },
@@ -29,7 +29,7 @@ module.exports = {
     rules: [
       {
         test: /\.s[ac]ss$/i,
-        use: ['style-loader', 'css-loader', 'sass-loader'],
+        use: ['style-loader', 'css-loader', 'sass-loader', 'postcss-loader'], //sass-loader and postcss-loader may not get along
       },
       {
         test: /\.(js|jsx)$/,
@@ -38,6 +38,7 @@ module.exports = {
           loader: 'babel-loader',
           options: {
             presets: ['@babel/preset-env', '@babel/preset-react'],
+            plugins: ['@babel/plugin-transform-runtime',],
           },
         },
       },
@@ -51,8 +52,17 @@ module.exports = {
   plugins: [
     new HtmlWebpackPlugin({
       title: 'Development',
-      filename: 'index.html',
+      //filename: 'index.html',
       template: 'client/index.html',
     }),
   ],
 };
+
+
+if (process.env.NODE_ENV = 'development') {
+//
+} else if (process.env.NODE_ENV = 'production') {
+  //
+}
+
+module.exports = config;
